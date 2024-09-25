@@ -1,24 +1,43 @@
-//
-//  ContentView.swift
-//  ClothingApp
-//
-//  Created by Артур Ан on 25.09.2024.
-//
-
 import SwiftUI
+import AuthenticationServices
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @StateObject private var viewModel = ClothingViewModel()
+    @Binding var isAuthenticated: Bool
 
-#Preview {
-    ContentView()
+    var body: some View {
+        NavigationView {
+            List(viewModel.filteredClothingStyles) { style in
+                ClothingStyleView(style: style, viewModel: viewModel)
+            }
+            .navigationTitle("Стиль одежды")
+            .onAppear {
+                Task {
+                    await viewModel.loadClothingStyles()
+                }
+            }
+            .toolbar {
+                if !isAuthenticated {
+                    Button(action: {
+                        signInWithApple() 
+                    }) {
+                        Text("Войти через Apple")
+                    }
+                } else {
+                    Text("Вы вошли как: User")
+                }
+            }
+        }
+    }
+
+    private func signInWithApple() {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        AppDelegate.shared?.isAuthenticated = $isAuthenticated 
+        controller.delegate = AppDelegate.shared
+        controller.presentationContextProvider = AppDelegate.shared
+        controller.performRequests()
+    }
 }
