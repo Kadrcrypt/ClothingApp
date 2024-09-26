@@ -32,53 +32,83 @@ class AppDelegate: NSObject, UIApplicationDelegate, ASAuthorizationControllerDel
 
 struct AuthenticationView: View {
     @Binding var isAuthenticated: Bool
+    
+    @State private var phoneOrEmail: String = ""
+    @State private var password: String = ""
 
     var body: some View {
-        Button(action: {
-            signInWithApple()
-        }) {
-            Text("Войти через Apple ID")
-        }
-    }
+        ZStack {
+            Color.gray.opacity(0.2)
+                .edgesIgnoringSafeArea(.all)
 
-    private func signInWithApple() {
-        let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.fullName, .email]
+            VStack {
+                Spacer()
 
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        AppDelegate.shared?.isAuthenticated = $isAuthenticated
-        controller.delegate = AppDelegate.shared
-        controller.presentationContextProvider = AppDelegate.shared
-        controller.performRequests()
-    }
-}
+                
+                Text("Авторизация")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .padding()
+                    .shadow(radius: 1)
+                    .padding([.leading, .trailing], 40)
+                
+                TextField("Телефон или эл. почта", text: $phoneOrEmail)
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .shadow(radius: 3)
+                    .padding([.leading, .trailing], 40)
 
-// Main Content View
-struct MainContentView: View {
-    @StateObject private var viewModel = ClothingViewModel()
-    @Binding var isAuthenticated: Bool
+                SecureField("Пароль", text: $password)
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .shadow(radius: 3)
+                    .padding([.leading, .trailing, .top], 40)
 
-    var body: some View {
-        NavigationView {
-            List(viewModel.filteredClothingStyles) { style in
-                ClothingStyleView(style: style, viewModel: viewModel)
-            }
-            .navigationTitle("Стиль одежды")
-            .onAppear {
-                Task {
-                    await viewModel.loadClothingStyles()
+                // Кнопка Войти
+                Button(action: {
+                    print("Вход по логину и паролю: \(phoneOrEmail), \(password)")
+                    // Тут надо логику авторизации через тупой метод email/phone password
+                }) {
+                    Text("Войти")
+                        .font(.headline)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 5)
                 }
-            }
-            .toolbar {
-                if !isAuthenticated {
-                    Button(action: {
-                        signInWithApple()
-                    }) {
-                        Text("Войти через Apple")
+                .padding([.leading, .trailing, .top], 40)
+
+                Text("Или")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding(.top, 10)
+                    .padding(.bottom, 10)
+
+                Button(action: {
+                    signInWithApple()
+                }) {
+                    HStack {
+                        Image(systemName: "applelogo")
+                            .resizable()
+                            .frame(width: 16, height: 16)
+                        Text("Войти через Apple ID")
+                            .font(.subheadline)
+                            .padding(10)
                     }
-                } else {
-                    Text("Вы вошли как: User")
+                    .padding(5)
+                    .frame(maxWidth: 250)
+                    .background(Color.blue.opacity(0.8))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .shadow(radius: 5)
                 }
+                .padding([.leading, .trailing, .bottom], 40)
+
+                Spacer()
             }
         }
     }
@@ -94,6 +124,7 @@ struct MainContentView: View {
         controller.performRequests()
     }
 }
+
 
 @main
 struct MyClothingAppApp: App {
@@ -105,7 +136,27 @@ struct MyClothingAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainContentView(isAuthenticated: $isAuthenticated) 
+            if isAuthenticated {
+                ContentView(isAuthenticated: $isAuthenticated) // Перенаправление на ContentView после авторизации
+            } else {
+                AuthenticationView(isAuthenticated: $isAuthenticated) // Вход через Apple ID
+            }
         }
+    }
+}
+
+struct AuthenticationView_Previews: PreviewProvider {
+    static var previews: some View {
+        AuthenticationView(isAuthenticated: .constant(false))
+            .preferredColorScheme(.light)
+            .previewDevice("iPhone 14")
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView(isAuthenticated: .constant(true))
+            .preferredColorScheme(.light)
+            .previewDevice("iPhone 14")
     }
 }
